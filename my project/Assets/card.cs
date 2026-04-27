@@ -1,76 +1,77 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+
 public class card : MonoBehaviour
 {
+    [SerializeField] private float rotSpeed = 10f; // 회전 속도 (인스펙터에서 조절)
+    public GameObject frontImage;
+    public GameObject backImage;
 
-    public float rotateY;
-    public TextMeshProUGUI text;
-    public bool isFront = true;
-    private Quaternion flipRortation = Quaternion.Euler(0,180f,0 );
-    private Quaternion originRortation = Quaternion.Euler(0, 0, 0);
-    public int number;
-    public Cardgame cardGame;
+    public Cardgame cardGame; // 매니저 참조
+    private TextMeshProUGUI text;
+
+    public bool isFront = false;
     public bool ismatched = false;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    [HideInInspector] public int number;
 
-    // Update is called once per frame
-    void Update()
-    { 
+    private void Update()
+    {
+        // 1. 회전 로직: isFront 값에 따라 목표 각도로 Slerp
+        // 0도(앞면), 180도(뒷면)
+        Quaternion targetRot = isFront ? Quaternion.Euler(0, 0, 0) : Quaternion.Euler(0, 180, 0);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotSpeed);
 
-
-        float currenY = transform.eulerAngles.y;
-
-
-        if (isFront)
+        // 2. 각도에 따른 오브젝트 활성화/비활성화 (90도 기준)
+        float yRotation = transform.eulerAngles.y;
+        if (yRotation > 90f && yRotation < 270f)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, originRortation, rotateY * Time.deltaTime);
+            frontImage.SetActive(false);
+            backImage.SetActive(true);
         }
         else
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, flipRortation, rotateY * Time.deltaTime);
+            frontImage.SetActive(true);
+            backImage.SetActive(false);
         }
-      
-
     }
 
     public void ClickCard()
     {
-        if(ismatched)
-        {
+        // 이미 맞췄거나 앞면이면 클릭 방지
+        if (ismatched || isFront) return;
 
-        }
-        else
-        {
-            cardGame.OnClickCard(this);
-            
-        }
-
+        // 매니저에게 알림 (매니저가 Flip(true)을 호출해줄 것임)
+        cardGame.OnClickCard(this);
     }
 
-    public void Flip(bool isFront)
+    public void Flip(bool state)
     {
-        this.isFront = isFront;
+        isFront = state;
     }
 
-    public void SetCardNumber(int newnumber)
+    public void SetCardNumber(int num)
     {
-        text = GetComponentInChildren<TextMeshProUGUI>();
-        number = newnumber;
-        text.text = number.ToString();
+        if (text == null) text = GetComponentInChildren<TextMeshProUGUI>();
+        number = num;
+        if (text != null) text.text = num.ToString();
     }
-
-
-    public void ChangeColor(Color newColor)
-    {
-        GetComponent<Image>().color = newColor;
-    }
-
 
     public void Setimage(Sprite sprite)
     {
-        GetComponent<Image>().sprite = sprite;
-    }
+        if (frontImage != null)
+        {
+            Image img = frontImage.GetComponent<Image>();
+            if (img != null) img.sprite = sprite;
+        }
     }
 
-
+    public void ChangeColor(Color newColor)
+    {
+        if (frontImage != null)
+        {
+            Image img = frontImage.GetComponent<Image>();
+            if (img != null) img.color = newColor;
+        }
+    }
+}
