@@ -8,7 +8,10 @@ public class Cardgame : MonoBehaviour
 
     public GameObject cardPrefab;
     public Transform cardParent;
-    public int cardCount = 8;
+
+    [Header("설정")]
+    [Tooltip("원하는 페어(쌍)의 개수를 입력하세요. (예: 1 입력 시 카드 2장 생성)")]
+    public int pairCount = 4; 
 
     public card firstCard = null;
     public card secondCard = null;
@@ -21,12 +24,19 @@ public class Cardgame : MonoBehaviour
 
     void StartGame()
     {
-        Debug.Log("StartGame 실행됨");
+        Debug.Log($"StartGame 실행됨: {pairCount} 페어 생성 시작");
+
+        Soundmanager.Instance.PlayBGM();
+        
+        foreach (card c in cards) { if (c != null) Destroy(c.gameObject); }
         cards.Clear();
 
-        List<int> pairNumbers = GeneratePairNumbers(cardCount);
+        List<int> pairNumbers = GeneratePairNumbers(pairCount);
 
-        for (int i = 0; i < cardCount; ++i)
+       
+        int totalCardCount = pairCount * 2;
+
+        for (int i = 0; i < totalCardCount; ++i)
         {
             GameObject obj = Instantiate(cardPrefab, cardParent);
             card newCard = obj.GetComponent<card>();
@@ -34,34 +44,36 @@ public class Cardgame : MonoBehaviour
             newCard.cardGame = this;
             newCard.SetCardNumber(pairNumbers[i]);
 
-            // 이미지 설정 (sprites 리스트 범위 체크)
+            
             if (pairNumbers[i] < sprites.Count)
                 newCard.Setimage(sprites[pairNumbers[i]]);
 
-            // 처음엔 앞면을 보여줬다가 잠시 후 뒤집음
-            newCard.Flip(true);
+            newCard.Flip(true); 
             cards.Add(newCard);
         }
 
-        Invoke("HideAllCards", 2.0f); // 처음에 기억할 시간 2초로 늘림
+        Invoke("HideAllCards", 2.0f);
     }
 
     public void OnClickCard(card clickedCard)
     {
-        // 체크 중이거나 이미 선택한 카드를 또 누르면 무시
-        if (isChecking || clickedCard == firstCard) return;
+        if (isChecking || clickedCard == firstCard || clickedCard.ismatched) return;
 
-        clickedCard.Flip(true); // 카드 뒤집기
+        clickedCard.Flip(true);
 
         if (firstCard == null)
         {
             firstCard = clickedCard;
+            Soundmanager.Instance.PlaySoundFx();
+
         }
         else
         {
+            Soundmanager.Instance.PlaySoundFx();
+
             secondCard = clickedCard;
-            isChecking = true; // 두 장 다 뒤집었으니 체크 시작
-            Invoke("CheckCard", 0.4f); // 뒤집히는 애니메이션 시간 확보
+            isChecking = true;
+            Invoke("CheckCard", 0.4f);
         }
     }
 
@@ -69,20 +81,20 @@ public class Cardgame : MonoBehaviour
     {
         if (firstCard.number == secondCard.number)
         {
-            // 짝이 맞을 때
             firstCard.ChangeColor(Color.red);
             secondCard.ChangeColor(Color.red);
             firstCard.ismatched = true;
             secondCard.ismatched = true;
 
+            
             firstCard = null;
             secondCard = null;
             isChecking = false;
         }
         else
         {
-            // 짝이 틀릴 때 -> 1초 뒤에 다시 뒤집기
             Invoke("HideCard", 0.4f);
+            Soundmanager.Instance.PlaySoundFx();
         }
     }
 
@@ -100,21 +112,23 @@ public class Cardgame : MonoBehaviour
     {
         for (int i = 0; i < cards.Count; i++)
         {
-            cards[i].Flip(false);
+            if (cards[i] != null) cards[i].Flip(false);
         }
     }
 
-    List<int> GeneratePairNumbers(int cardCount)
+
+    List<int> GeneratePairNumbers(int pairs)
     {
-        int pairCount = cardCount / 2;
         List<int> newCardNumbers = new List<int>();
 
-        for (int i = 0; i < pairCount; ++i)
+        
+        for (int i = 0; i < pairs; ++i)
         {
             newCardNumbers.Add(i);
             newCardNumbers.Add(i);
         }
 
+        
         for (int i = newCardNumbers.Count - 1; i > 0; i--)
         {
             int rnd = Random.Range(0, i + 1);
